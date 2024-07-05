@@ -15,6 +15,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 import locale
 import csv
+import time
 import os
 
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
@@ -29,8 +30,9 @@ class AvitoParser:
         self.search_term = search_term
         self.base_url = base_url
 
-        self.url = self.get_url(self.base_url, self.search_term, 1)  # Хардкод
-        self.download_page(self.url)
+        self.url = self.get_url(self.base_url, self.search_term, 10)  # Хардкод
+        res = self.download_page(self.url)
+        # self.download_page("https://vk.com/jur4ikdzn")
 
     @staticmethod
     def get_url(base_url: str, query: str, page: int) -> str:
@@ -48,13 +50,23 @@ class AvitoParser:
         driver = webdriver.Chrome(service=service)
         driver.get(url_to_search)
         wait = WebDriverWait(driver, timeout=10)
+        driver.open(url_to_search)
+        if "Доступ ограничен" in driver.get_title():
+            time.sleep(10)
+            raise Exception("Перезапуск из-за блокировки IP")
 
-        el_with_class = driver.find_element(By.CLASS_NAME, "styles-module-theme-rOnN1")
-
-        wait.until(lambda d: el_with_class.is_displayed())
+        driver.open_new_window()  # сразу открываем и вторую вкладку
+        driver.switch_to_window(window=0)
+        try:
+            pass
+            el_with_class = driver.find_element(By.CLASS_NAME, "styles-module-theme-rOnN1")
+            wait.until(lambda d: el_with_class.is_displayed())
+        except Exception as e:
+            return False
         # soup = BeautifulSoup(driver.page_source, "lxml")
-        print(driver.page_source, file=open("temp.html", "a", encoding="utf-8"))
+        print(driver.page_source, file=open("temp.html", "w", encoding="utf-8"))
         driver.quit()
+        return True
 
 
 pars = AvitoParser("apple ipad air 11", BASE_URL)
