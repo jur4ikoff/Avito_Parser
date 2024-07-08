@@ -1,9 +1,5 @@
-import requests
-from bs4 import BeautifulSoup
-from selenium.webdriver.common.by import By
 import urllib
 from collections import namedtuple
-from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
@@ -23,7 +19,7 @@ def process_price(price: str) -> str:
 
 
 def process_time(time: str) -> str:
-    """Функция обрабатывает время публикации объявления"""
+    """Функция приводит время, когда объявление было выложено, к дням"""
     if "назад" in time:
         if "дней" in time or "дня" in time or "день" in time:
             return str(int(time[:2]))
@@ -36,21 +32,20 @@ def process_time(time: str) -> str:
     return "40"
 
 
-class AvitoParser:
-    """Парсит объявления по url в csv файл"""
+class AvitoParserSearchTerm:
+    """Парсит объявления по поисковому запросу в csv файл"""
 
     def __init__(self, search_term: str, base_url: str, selenium_path: str):
         self.search_term = search_term
-        self.base_url = base_url
         self.Ads = namedtuple("Ads", ["name", "price", "period_days", "count_marks", "avg_mark", "pars_time"])
         self.ads_list = []
 
         flag = True
         page = 1
         while flag:
-            self.url = self.get_url(self.base_url, self.search_term, page)  # Хардкод
+            self.url = self.get_url(base_url, self.search_term, page)  # Хардкод
             page += 1
-            res = self.__download_page(self.url, selenium_path)
+            res = self.__download_page(selenium_path)
             if res:
                 parse_status = self.__parse_page()
                 if parse_status:
@@ -74,11 +69,11 @@ class AvitoParser:
         url = f"{base_url}?{query_string}"
         return url
 
-    def __download_page(self, url_to_search: str, selenium_path):
+    def __download_page(self, selenium_path):
         """Скачивает HTML страницу"""
         service = Service(executable_path=selenium_path)
         self.driver = webdriver.Chrome(service=service)
-        self.driver.get(url_to_search)
+        self.driver.get(self.url)
         wait = WebDriverWait(self.driver, timeout=10)
 
         try:
@@ -92,6 +87,7 @@ class AvitoParser:
         return True
 
     def __parse_page(self):
+        """Функция парсит загруженные файлы на """
         soup = BeautifulSoup(self.driver.page_source, features="lxml")
         products = soup.find_all("div", class_="iva-item-content-rejJg")
 
@@ -123,69 +119,18 @@ class AvitoParser:
             return False
 
     def __write_file(self, filename: str):
+        """Функция записывает данные о товаре в csv файл"""
         exist = False
         if os.path.exists(filename):
             exist = True
 
         with open(filename, mode="a", newline="", encoding="utf-8") as csvfile:
             writer = csv.writer(csvfile)
-
             if not exist:
                 writer.writerow(self.Ads._fields)
-
             # запись данных
             for ad in self.ads_list:
                 try:
                     writer.writerow(ad)
                 except Exception as e:
                     print(ad)
-
-
-def config_parser():
-    config = configparser.ConfigParser()
-    config.read('settings.ini')
-    parse_url = config.get("Avito", "base_url")
-    selenium_path = config.get("Avito", "selenium_path")
-    search_term = config.get("Avito", "search_term")
-    print(parse_url, selenium_path, search_term)
-    parser = AvitoParser(search_term, parse_url, selenium_path)
-    return parser
-
-
-def start_parser():
-    parser = config_parser()
-
-
-if __name__ == "__main__":
-    start_parser()
-
-"""
-service = Service(executable_path="c:\\python\\chromedriver.exe")
-driver = webdriver.Chrome(service=service)
-driver.get(url)
-
-wait = WebDriverWait(driver, timeout=2)
-
-# Ожидание, пока элемент с заданным классом станет доступен
-el_with_class = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "styles-module-theme-ronn1")))
-
-# Теперь можно использовать BeautifulSoup для парсинга страницы
-soup = BeautifulSoup(driver.page_source, "lxml")
-
-# Не забудьте закрыть драйвер, когда он больше не нужен
-driver.quit()
-"""
-
-"""
-file = open("temp.html", "r", encoding="utf-8")
-f = file.read()"""
-
-"""response = requests.get(url, headers=headers, allow_redirects=false)
-print(response.status_code)
-soup = beautifulsoup(response.text, "html.parser")
-print(response.text, file=open("temp.html", 'w', encoding='utf-8'))
-# parent = soup.find("div", {"class": "iva-item-body-kluuy"})
-# print(parent.)
-
-# iva-item-body-kluuy
-"""
