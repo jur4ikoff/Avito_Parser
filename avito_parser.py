@@ -56,9 +56,9 @@ class AvitoParserSearchTerm:
                 # print("Парс удачный")
             else:
                 print("Бан по Ip или неожиданный выход из селениума")
-                break
-            break
-        self.__write_file("test.csv")
+                flag = False
+
+        self.__write_file(f"{search_term.replace(' ', '_')}.csv")
 
     @staticmethod
     def get_url(base_url: str, query: str, page: int) -> str:
