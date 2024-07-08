@@ -3,3 +3,4 @@
 temp.html
 *.csv
 test.py
+__pycache__
